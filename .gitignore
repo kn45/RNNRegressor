@@ -1,0 +1,6 @@
+*.pyc
+data_all/*
+data_train/*
+data_test/*
+data_pred/*
+chardict

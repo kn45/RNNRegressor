@@ -83,7 +83,7 @@ class LSTMRegressor(object):
                 loss = self.evals(sess, evl[2], evl[3])
                 evlstr += evl[0] + ': ' + str(loss) + '\t\t'
             else:
-                evlstr += evl[0] + ': -------\t\t'  
+                evlstr += evl[0] + ': -------\t\t'
         print evlstr
         sys.stdout.flush()
 

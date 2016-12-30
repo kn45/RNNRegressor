@@ -21,12 +21,15 @@ def title_encoding(title):
         chars.append(idx)
     return chars
 
+
 def build_dict():
     cencoder.build_dict('data_all/data_all.tsv')
     cencoder.save_dict('chardict')
 
+
 def init():
     cencoder.load_dict('chardict')
+
 
 def main():
     outfile = sys.argv[2]

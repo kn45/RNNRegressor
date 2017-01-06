@@ -12,7 +12,8 @@ class RNNRegressor(object):
     """
     def __init__(self, vocab_size, emb_dim=200, hid_dim=128, nclass=1,
                  time_len=40, pad_id=0, one_hot=False, cellt='LSTM',
-                 nlayer=1, reg_lambda=0, lr=None, init_embed=None):
+                 nlayer=1, reg_lambda=0, lr=None, init_embed=None,
+                 emb_trainable=True, keep_prob=1.0):
         self.TIME_LEN = time_len  # max time-series length
         self.PAD_ID = pad_id  # 0
 
@@ -30,7 +31,7 @@ class RNNRegressor(object):
             if init_embed is not None:
                 embedding = tf.Variable(
                     tf.convert_to_tensor(init_embed, dtype=tf.float32),
-                    trainable=False, name='embedding')
+                    trainable=emb_trainable, name='embedding')
             else:
                 embedding = tf.get_variable(
                     'embedding', shape=[vocab_size, emb_dim],
@@ -40,7 +41,7 @@ class RNNRegressor(object):
                         dtype=tf.float32))
             inp_emb = tf.nn.embedding_lookup(embedding, self.inp_x)
 
-        # construct rnn
+        # construct basic cell
         if cellt == 'LSTM':
             cell = tf.nn.rnn_cell.LSTMCell(
                 num_units=hid_dim,
@@ -49,6 +50,8 @@ class RNNRegressor(object):
                     maxval=+1./emb_dim**0.5))
         elif cellt == 'GRU':
             cell = tf.nn.rnn_cell.GRUCell(num_units=hid_dim)
+        elif cellt == 'BasicRNN':
+            cell = tf.nn.rnn_cell.BasicRNNCell(num_units=hid_dim)
         else:
             sys.stderr.write('invalid cell type')
             sys.exit(1)
@@ -57,6 +60,12 @@ class RNNRegressor(object):
         if nlayer > 1:
             cell = tf.nn.rnn_cell.MultiRNNCell(cells=[cell] * nlayer)
 
+        # dropout
+        if keep_prob < 1.0:
+            cell = tf.nn.rnn_cell.DropoutWrapper(
+                cell, output_keep_prob=keep_prob, input_keep_prob=keep_prob)
+
+        # construct rnn
         outputs, states = tf.nn.dynamic_rnn(
             cell=cell,
             dtype=tf.float32,
@@ -155,6 +164,6 @@ if __name__ == '__main__':
 
     sess = tf.InteractiveSession()
     sess.run(tf.initialize_all_variables())
-    for _ in range(100):
+    for _ in range(50):
         mdl_lstm.train_step(sess, data_inp_x, data_inp_y, evals)
     sess.close()

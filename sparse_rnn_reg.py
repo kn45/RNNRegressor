@@ -61,9 +61,9 @@ class RNNRegressor(object):
             cell = tf.nn.rnn_cell.MultiRNNCell(cells=[cell] * nlayer)
 
         # dropout
-        if keep_prob < 1.0:
-            cell = tf.nn.rnn_cell.DropoutWrapper(
-                cell, output_keep_prob=keep_prob, input_keep_prob=keep_prob)
+        # set keep_prob = 1.0 when predicting
+        cell = tf.nn.rnn_cell.DropoutWrapper(
+            cell, output_keep_prob=keep_prob, input_keep_prob=keep_prob)
 
         # construct rnn
         outputs, states = tf.nn.dynamic_rnn(

@@ -156,14 +156,13 @@ if __name__ == '__main__':
                 [[0.092], [2, 6, 3, 4, 8, 6]],
                 [[0.047], [5, 5, 7, 1, 6]]]
 
-    data_inp_x, data_inp_y = mdl_lstm.get_pad_batch(inp_data, 3)
-    print data_inp_x
-    print data_inp_y
-
     evals = [['train', 1.0, data_inp_x, data_inp_y]]
 
     sess = tf.InteractiveSession()
     sess.run(tf.initialize_all_variables())
     for _ in range(50):
+        data_inp_x, data_inp_y = mdl_lstm.get_pad_batch(inp_data, 3)
+        print data_inp_x
+        print data_inp_y
         mdl_lstm.train_step(sess, data_inp_x, data_inp_y, evals)
     sess.close()

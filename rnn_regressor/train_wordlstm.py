@@ -25,10 +25,10 @@ if __name__ == '__main__':
         init_embed=init_embed,
         keep_prob=1.0,
         emb_trainable=True,
-        #lr=0.0005,
+        # lr=0.0005,
         reg_lambda=1.0)
 
-    #with open('data_train/valid_feature.tsv') as f:
+    # with open('data_train/valid_feature.tsv') as f:
     with open('data_train/valid_feature_small.tsv') as f:
         valid_data = [x.rstrip('\n').split('\t') for x in f.readlines()]
     valid_y = np.array([x[0:1] for x in valid_data], dtype=np.float32)

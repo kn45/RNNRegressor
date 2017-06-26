@@ -16,8 +16,8 @@ class MLPRegressor(object):
         self.HID_DIM = hid_dim  # hidden layer dimension
 
         # prepare input and output placeholder
-        self.inp_x = tf.placeholder(tf.float32, [None, self.INP_DIM], 'input_x')
-        self.inp_y = tf.placeholder(tf.float32, [None, nclass], 'input_y')
+        self.inp_x = tf.placeholder(tf.float32, [None, self.INP_DIM], 'inp_x')
+        self.inp_y = tf.placeholder(tf.float32, [None, nclass], 'inp_y')
 
         # layers
         w0 = tf.get_variable(
@@ -89,7 +89,7 @@ class MLPRegressor(object):
 
     def _sparse2plain(self, data_inst, ndim=None):
         x_inst = np.zeros((ndim), dtype=np.float32)
-        if len(data_inst) > 1 and data_inst[1]:  # if there are non-zero features
+        if len(data_inst) > 1 and data_inst[1]:  # if non-zero features
             for idx, value in data_inst[1:]:
                 x_inst[idx - 1] = value
         return np.array(x_inst, dtype=np.float32), \
@@ -143,7 +143,8 @@ def test_dense():
     b = np.array([0.5] * ndata).reshape((ndata, 1))
     x_data = np.random.rand(ndata, ndim)
     y_data = np.dot(x_data, w) + b
-    # noise = (np.random.rand(ndata).astype(np.float32) * 0.02).reshape((ndata, 1))
+    # noise = (np.random.rand(ndata).astype(np.float32) * 0.02)
+    # noise = noise.reshape((ndata, 1))
     # y_data = np.dot(x_data, w) + b + noise
     inp_data = np.array([np.array([np.array(y), np.array(x)]) for x, y in
                          zip(x_data.tolist(), y_data.tolist())])

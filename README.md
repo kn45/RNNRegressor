@@ -6,4 +6,6 @@ Some network structures by tensorflow.
 
 - Multilayer perceptron
 
+- CNN classifier for text
+
   ​

@@ -1,5 +1,5 @@
 # RNNRegressor
-RNN(BasicRNN LSTM GRU) regressor by tensorflow.
+A rough piece of RNN regressor by tensorflow.
 
 Keys:
 

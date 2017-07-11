@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+# refer to https://github.com/dennybritz/cnn-text-classification-tf
 import numpy as np
 import tensorflow as tf
 
@@ -8,15 +8,16 @@ class TextCNNClassifier(object):
     """CNN for text classifier
     """
     def __init__(self, seq_len=100, emb_dim=256, nclass=1, vocab_size=10000,
-                 filter_sizes, nfilters):
+                 filter_sizes=None, nfilters=3, reg_lambda=0.0, lr=1e-3):
 
+        self.global_steps = 0
         # prepare input and output placeholder
         self.inp_x = tf.placeholder(tf.int32, [None, seq_len], name='input_x')
         self.inp_y = tf.placeholder(tf.float32, [None, nclass], name='input_y')
-        self.dropout_prob = tf.placeholder(tf.float32, name="dropout_prob")
+        self.dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
 
         # embedding
-        with tf.namescope('embedding'):
+        with tf.name_scope('embedding'):
             embedding = tf.Variable(
                 tf.random_uniform([vocab_size, emb_dim], -1.0, 1.0),
                 name='W')
@@ -25,9 +26,10 @@ class TextCNNClassifier(object):
             self.emb_chars_exp = tf.expand_dims(self.emb_chars, -1)
 
         # convolution Layer
-        with tf.name_scope('conv-max-pool-%s', filter_size):
-            pooled_outputs = []
-            for i, filter_size in enumerate(filter_sizes):
+
+        pooled_outputs = []
+        for i, filter_size in enumerate(filter_sizes):
+            with tf.name_scope('conv-max-pool-' + str(filter_size)):
                 # [filter height, filter width, in channels, out channels]
                 filter_shape = [filter_size, emb_dim, 1, nfilters]
                 W = tf.Variable(
@@ -65,18 +67,47 @@ class TextCNNClassifier(object):
 
         # output
         with tf.name_scope('output'):
-            W = tf.Variable(
-                tf.truncated_normal([nfilters_total, nclass], stddev=0.1),
-                name='W')
+            W = tf.get_variable(
+                "W",
+                shape=[nfilters_total, nclass],
+                initializer=tf.contrib.layers.xavier_initializer())
             b = tf.Variable(tf.constant(0.1, shape=[nclass]), name='b')
+            self.l2_loss = tf.nn.l2_loss(W) + tf.nn.l2_loss(b)
             self.scores = tf.nn.xw_plus_b(self.h_drop, W, b, name='scores')
             self.preds = tf.argmax(self.scores, 1, name='predictions')
             # self.pred_proba =
 
-        # Calculate mean cross-entropy loss
+        # calculate mean cross-entropy loss
         with tf.name_scope('loss'):
-            loss = tf.reduce_mean(
+            self.loss = tf.reduce_mean(
                 tf.nn.softmax_cross_entropy_with_logits(
-                    self.scores, self.inp_y))
-            # ignore L2 norm loss? refer to paper
-            self.total_loss = loss
+                    logits=self.scores, labels=self.inp_y))
+            self.total_loss = self.loss + reg_lambda * self.l2_loss
+
+        with tf.name_scope('opt'):
+            self.opt = tf.train.AdamOptimizer(
+                learning_rate=lr).minimize(self.total_loss)
+
+        # accuracy
+        with tf.name_scope('accuracy'):
+            correct_preds = tf.equal(
+                self.preds, tf.argmax(self.inp_y, 1))
+            self.accuracy = tf.reduce_mean(
+                tf.cast(correct_preds, 'float'), name='accuracy')
+
+    def train_step(self, sess, inp_batch_x, inp_batch_y):
+        input_dict = {
+            self.inp_x: inp_batch_x,
+            self.inp_y: inp_batch_y,
+            self.dropout_prob: 0.5}
+        sess.run(self.opt, feed_dict=input_dict)
+        self.global_steps += 1
+
+    def eval_step(self, sess, inp_batch_x, inp_batch_y):
+        input_dict = {
+            self.inp_x: inp_batch_x,
+            self.inp_y: inp_batch_y,
+            self.dropout_prob: 1.0}
+        loss, accuracy = sess.run(
+            [self.loss, self.accuracy], feed_dict=input_dict)
+        return loss, accuracy

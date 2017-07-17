@@ -1,6 +1,6 @@
 # TFModels
 
-Some network structures by tensorflow.
+Some network structures by tensorflow. Only pieces of code, not friendly to public use.
 
 - RNN regressor(LSTM, GRU, etc.)
 

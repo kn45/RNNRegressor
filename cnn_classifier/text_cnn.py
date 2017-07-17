@@ -10,11 +10,12 @@ class TextCNNClassifier(object):
     def __init__(self, seq_len=100, emb_dim=256, nclass=1, vocab_size=10000,
                  filter_sizes=None, nfilters=3, reg_lambda=0.0, lr=1e-3):
 
-        self.global_steps = 0
         # prepare input and output placeholder
         self.inp_x = tf.placeholder(tf.int32, [None, seq_len], name='input_x')
         self.inp_y = tf.placeholder(tf.float32, [None, nclass], name='input_y')
         self.dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
+
+        self.global_step = tf.Variable(0, name='global_step', trainable=False)
 
         # embedding
         with tf.name_scope('embedding'):
@@ -86,7 +87,8 @@ class TextCNNClassifier(object):
 
         with tf.name_scope('opt'):
             self.opt = tf.train.AdamOptimizer(
-                learning_rate=lr).minimize(self.total_loss)
+                learning_rate=lr).minimize(
+                    self.total_loss, global_step=self.global_step)
 
         # accuracy
         with tf.name_scope('accuracy'):
@@ -101,7 +103,6 @@ class TextCNNClassifier(object):
             self.inp_y: inp_batch_y,
             self.dropout_prob: 0.5}
         sess.run(self.opt, feed_dict=input_dict)
-        self.global_steps += 1
 
     def eval_step(self, sess, inp_batch_x, inp_batch_y):
         input_dict = {
@@ -111,3 +112,10 @@ class TextCNNClassifier(object):
         loss, accuracy = sess.run(
             [self.loss, self.accuracy], feed_dict=input_dict)
         return loss, accuracy
+
+    def predict(self, sess, input_x):
+        pred_dict = {self.inp_x: input_x}
+        return sess.run(self.preds, feed_dict=pred_dict)
+
+    def predict_proba(self, sess, input_x):
+        pred_dict = {self.inp_x: input_x}

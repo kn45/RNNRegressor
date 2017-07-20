@@ -45,7 +45,7 @@ metrics = ['loss', 'auc']
 niter = 0
 while niter < 500:
     niter += 1
-    batch_data = freader.get_batch(64)
+    batch_data = freader.get_batch(128)
     if len(batch_data) <= 0:
         break
     train_x, train_y = inp_fn(batch_data)

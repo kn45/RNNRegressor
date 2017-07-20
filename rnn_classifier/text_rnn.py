@@ -101,7 +101,8 @@ class TextRNNClassifier(object):
         # auc
         labels_c = tf.argmax(self.inp_y, 1)
         preds_c = tf.nn.softmax(self.scores)[:, 1]
-        self.auc = tf.metrics.auc(labels=labels_c, predictions=preds_c)
+        self.auc = tf.metrics.auc(labels=labels_c,
+            predictions=preds_c, num_thresholds=1000)
 
     def train_step(self, sess, inp_batch_x, inp_batch_y, evals=None):
         input_dict = {
@@ -110,13 +111,22 @@ class TextRNNClassifier(object):
             self.dropout_prob: 0.5}
         sess.run(self.opt, feed_dict=input_dict)
 
-    def eval_step(self, sess, dev_x, dev_y):
+    def eval_step(self, sess, dev_x, dev_y, metrics=None):
+        if not metrics:
+            metrics = ['loss']
         eval_dict = {
             self.inp_x: dev_x,
             self.inp_y: dev_y,
             self.dropout_prob: 1.0}
-        loss, auc = sess.run([self.loss, self.auc], feed_dict=eval_dict)
-        return loss, auc
+        eval_res = []
+        for metric in metrics:
+            if metric == 'loss':
+                eval_res.append(sess.run(self.loss, feed_dict=eval_dict))
+            if metric == 'accuracy':
+                eval_res.append(sess.run(self.accuracy, feed_dict=eval_dict))
+            if metric == 'auc':
+                eval_res.append(sess.run(self.auc, feed_dict=eval_dict)[0])
+        return eval_res
 
     def predict(self, sess, input_x):
         pred_dict = {self.inp_x: input_x}

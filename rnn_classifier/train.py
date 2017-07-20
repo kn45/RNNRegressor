@@ -11,6 +11,7 @@ NCLASS = 2
 NWORDS = 18765
 SEQ_LEN = 100
 
+
 def inp_fn(data):
     inp_x = []
     inp_y = []
@@ -22,7 +23,6 @@ def inp_fn(data):
         inp_x.append(dataproc.zero_padding(feats, SEQ_LEN))
     return np.array(inp_x), np.array(inp_y)
 
-# train_file = '/Users/tchen/projects/ZhihuCup/mdl_cnn1/feat_train/trnvld_feature.tsv'
 train_file = './rt-polarity.shuf.train'
 test_file = './rt-polarity.shuf.test'
 freader = dataproc.BatchReader(train_file)
@@ -41,18 +41,18 @@ mdl = TextRNNClassifier(
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 sess.run(tf.local_variables_initializer())
+metrics = ['loss', 'auc']
 niter = 0
 while niter < 500:
     niter += 1
     batch_data = freader.get_batch(64)
-    #print batch_data[0]
     if len(batch_data) <= 0:
         break
     train_x, train_y = inp_fn(batch_data)
     mdl.train_step(sess, train_x, train_y)
-    train_eval = mdl.eval_step(sess, train_x, train_y)
-    test_eval = mdl.eval_step(sess, test_x, test_y) if niter % 20 == 0 else 'SKIP'
+    train_eval = mdl.eval_step(sess, train_x, train_y, metrics)
+    test_eval = mdl.eval_step(sess, test_x, test_y, metrics) \
+        if niter % 20 == 0 else 'SKIP'
     print 'train:', train_eval, 'test:', test_eval
 
 sess.close()
-

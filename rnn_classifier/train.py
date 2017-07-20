@@ -8,7 +8,7 @@ from text_rnn import TextRNNClassifier
 import dataproc
 
 NCLASS = 2
-NWORDS = 18764
+NWORDS = 18765
 SEQ_LEN = 100
 
 def inp_fn(data):
@@ -23,8 +23,12 @@ def inp_fn(data):
     return np.array(inp_x), np.array(inp_y)
 
 # train_file = '/Users/tchen/projects/ZhihuCup/mdl_cnn1/feat_train/trnvld_feature.tsv'
-train_file = './rt-polarity.shuf'
+train_file = './rt-polarity.shuf.train'
+test_file = './rt-polarity.shuf.test'
 freader = dataproc.BatchReader(train_file)
+with open(test_file) as f:
+    test_data = [x.rstrip('\n') for x in f.readlines()]
+test_x, test_y = inp_fn(test_data)
 
 mdl = TextRNNClassifier(
     seq_len=SEQ_LEN,
@@ -36,8 +40,9 @@ mdl = TextRNNClassifier(
 
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
+sess.run(tf.local_variables_initializer())
 niter = 0
-while niter < 1000:
+while niter < 500:
     niter += 1
     batch_data = freader.get_batch(64)
     #print batch_data[0]
@@ -45,8 +50,9 @@ while niter < 1000:
         break
     train_x, train_y = inp_fn(batch_data)
     mdl.train_step(sess, train_x, train_y)
-    print mdl.eval_step(sess, train_x, train_y)
+    train_eval = mdl.eval_step(sess, train_x, train_y)
+    test_eval = mdl.eval_step(sess, test_x, test_y) if niter % 20 == 0 else 'SKIP'
+    print 'train:', train_eval, 'test:', test_eval
 
-train_fp.close()
 sess.close()
 

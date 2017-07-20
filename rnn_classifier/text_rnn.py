@@ -98,6 +98,11 @@ class TextRNNClassifier(object):
         self.accuracy = tf.reduce_mean(
             tf.cast(correct_preds, 'float'), name='accuracy')
 
+        # auc
+        labels_c = tf.argmax(self.inp_y, 1)
+        preds_c = tf.nn.softmax(self.scores)[:, 1]
+        self.auc = tf.metrics.auc(labels=labels_c, predictions=preds_c)
+
     def train_step(self, sess, inp_batch_x, inp_batch_y, evals=None):
         input_dict = {
             self.inp_x: inp_batch_x,
@@ -110,8 +115,8 @@ class TextRNNClassifier(object):
             self.inp_x: dev_x,
             self.inp_y: dev_y,
             self.dropout_prob: 1.0}
-        loss, acc = sess.run([self.loss, self.accuracy], feed_dict=eval_dict)
-        return loss, acc
+        loss, auc = sess.run([self.loss, self.auc], feed_dict=eval_dict)
+        return loss, auc
 
     def predict(self, sess, input_x):
         pred_dict = {self.inp_x: input_x}

@@ -14,10 +14,14 @@ class TextRNNClassifier(object):
                  seq_len=50, cellt='LSTM', nlayer=1, reg_lambda=0, nsample=5,
                  nlabel=1, label_repr='dense',
                  obj='softmax', lr=1e-3, init_embed=None):
+        """Construct RNN network.
+        nlabel > 1 only when multi-label task
+        """
         if label_repr not in ['dense', 'sparse']:
             raise Exception('invalid label_repr')
         if obj not in ['softmax', 'ss']:
             raise Exception('invalid obj')
+
         # prepare input and output placeholder
         self.inp_x = tf.placeholder(tf.int32, [None, seq_len], 'input_x')
         self.dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')

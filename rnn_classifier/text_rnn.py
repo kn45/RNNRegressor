@@ -12,14 +12,25 @@ class TextRNNClassifier(object):
     """
     def __init__(self, vocab_size, emb_dim=256, hid_dim=128, nclass=1,
                  seq_len=50, cellt='LSTM', nlayer=1, reg_lambda=0, nsample=5,
+                 nlabel=1, label_repr='dense',
                  obj='softmax', lr=1e-3, init_embed=None):
-
+        if label_repr not in ['dense', 'sparse']:
+            raise Exception('invalid label_repr')
+        if obj not in ['softmax', 'ss']:
+            raise Exception('invalid obj')
         # prepare input and output placeholder
         self.inp_x = tf.placeholder(tf.int32, [None, seq_len], 'input_x')
-        self.inp_y = tf.placeholder(tf.float32, [None, nclass], 'input_y')
         self.dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
         inp_len = tf.reduce_sum(tf.sign(self.inp_x), reduction_indices=1)
-
+        self.label_repr = label_repr
+        if label_repr == 'dense':
+            self.inp_y_dense = tf.placeholder(tf.float32, [None, nclass], 'input_y')
+            self.inp_y_sparse = tf.argmax(self.inp_y_dense, 1)
+        if label_repr == 'sparse':
+            self.inp_y_sparse = tf.placeholder(tf.int64, [None, nlabel], 'input_y')
+            self.inp_y_dense = tf.reduce_sum(
+                tf.one_hot(indices=self.inp_y_sparse, depth=nclass),
+                reduction_indices=1)
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
 
         # embedding
@@ -83,7 +94,7 @@ class TextRNNClassifier(object):
 
         self.loss = tf.reduce_mean(
             tf.nn.softmax_cross_entropy_with_logits(
-                logits=self.scores, labels=self.inp_y))
+                logits=self.scores, labels=self.inp_y_dense))
 
         # calculate softmax loss
         if obj == 'softmax':
@@ -92,7 +103,7 @@ class TextRNNClassifier(object):
 
         # calculate sampled softmax_loss
         if obj == 'ss':
-            labels = tf.reshape(tf.argmax(self.inp_y, 1), [-1,1])
+            labels = tf.reshape(self.inp_y_sparse, [-1, 1])
             local_w_t = tf.cast(tf.transpose(w), tf.float32)
             local_b = tf.cast(b, tf.float32)
             local_inp = tf.cast(oup_rnn, tf.float32)
@@ -113,21 +124,26 @@ class TextRNNClassifier(object):
 
         # accuracy
         correct_preds = tf.equal(
-            self.preds, tf.argmax(self.inp_y, 1))
+            self.preds, self.inp_y_sparse)
         self.accuracy = tf.reduce_mean(
             tf.cast(correct_preds, 'float'), name='accuracy')
 
         # auc
-        labels_c = tf.argmax(self.inp_y, 1)
+        labels_c = self.inp_y_sparse
         preds_c = tf.nn.softmax(self.scores)[:, 1]
-        self.auc = tf.metrics.auc(labels=labels_c,
-            predictions=preds_c, num_thresholds=1000)
+        self.auc = tf.metrics.auc(
+            labels=labels_c,
+            predictions=preds_c,
+            num_thresholds=1000)
 
     def train_step(self, sess, inp_batch_x, inp_batch_y, evals=None):
         input_dict = {
             self.inp_x: inp_batch_x,
-            self.inp_y: inp_batch_y,
             self.dropout_prob: 0.5}
+        if self.label_repr == 'dense':
+            input_dict[self.inp_y_dense] = inp_batch_y
+        if self.label_repr == 'sparse':
+            input_dict[self.inp_y_sparse] = inp_batch_y
         sess.run(self.opt, feed_dict=input_dict)
 
     def eval_step(self, sess, dev_x, dev_y, metrics=None):
@@ -135,8 +151,11 @@ class TextRNNClassifier(object):
             metrics = ['loss']
         eval_dict = {
             self.inp_x: dev_x,
-            self.inp_y: dev_y,
             self.dropout_prob: 1.0}
+        if self.label_repr == 'dense':
+            eval_dict[self.inp_y_dense] = dev_y
+        if self.label_repr == 'sparse':
+            eval_dict[self.inp_y_sparse] = dev_y
         eval_res = []
         for metric in metrics:
             if metric == 'loss':

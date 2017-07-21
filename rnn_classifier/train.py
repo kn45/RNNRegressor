@@ -36,7 +36,9 @@ mdl = TextRNNClassifier(
     nclass=NCLASS,
     vocab_size=NWORDS,
     reg_lambda=0.0,
-    lr=1e-3)
+    lr=1e-3,
+    obj='ss',
+    nsample=1)
 
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
@@ -52,7 +54,7 @@ while niter < 500:
     mdl.train_step(sess, train_x, train_y)
     train_eval = mdl.eval_step(sess, train_x, train_y, metrics)
     test_eval = mdl.eval_step(sess, test_x, test_y, metrics) \
-        if niter % 20 == 0 else 'SKIP'
+        if niter % 100 == 0 else 'SKIP'
     print 'train:', train_eval, 'test:', test_eval
 
 sess.close()

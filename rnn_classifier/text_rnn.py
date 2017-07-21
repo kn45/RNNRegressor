@@ -11,8 +11,8 @@ class TextRNNClassifier(object):
     """Text RNN Classifier
     """
     def __init__(self, vocab_size, emb_dim=256, hid_dim=128, nclass=1,
-                 seq_len=50, cellt='LSTM', nlayer=1, reg_lambda=0,
-                 lr=1e-3, init_embed=None):
+                 seq_len=50, cellt='LSTM', nlayer=1, reg_lambda=0, nsample=5,
+                 obj='softmax', lr=1e-3, init_embed=None):
 
         # prepare input and output placeholder
         self.inp_x = tf.placeholder(tf.int32, [None, seq_len], 'input_x')
@@ -81,12 +81,31 @@ class TextRNNClassifier(object):
         self.scores = tf.nn.xw_plus_b(oup_rnn, w, b, name='scores')
         self.preds = tf.argmax(self.scores, 1, name='predictions')
 
-        # calculate loss
         self.loss = tf.reduce_mean(
             tf.nn.softmax_cross_entropy_with_logits(
                 logits=self.scores, labels=self.inp_y))
-        reg_loss = reg_lambda * (tf.nn.l2_loss(w) + tf.nn.l2_loss(b))  # l2 reg
-        self.total_loss = self.loss + reg_loss
+
+        # calculate softmax loss
+        if obj == 'softmax':
+            reg_loss = reg_lambda * (tf.nn.l2_loss(w) + tf.nn.l2_loss(b))  # l2 reg
+            self.total_loss = self.loss + reg_loss
+
+        # calculate sampled softmax_loss
+        if obj == 'ss':
+            labels = tf.reshape(tf.argmax(self.inp_y, 1), [-1,1])
+            local_w_t = tf.cast(tf.transpose(w), tf.float32)
+            local_b = tf.cast(b, tf.float32)
+            local_inp = tf.cast(oup_rnn, tf.float32)
+            self.total_loss = tf.cast(
+                tf.nn.sampled_softmax_loss(
+                    weights=local_w_t,
+                    biases=local_b,
+                    labels=labels,
+                    inputs=local_inp,
+                    num_sampled=nsample,
+                    num_classes=nclass,
+                    partition_strategy='div'),
+                dtype=tf.float32)
 
         # bptt
         self.opt = tf.train.AdamOptimizer(lr).minimize(

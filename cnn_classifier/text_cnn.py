@@ -27,7 +27,6 @@ class TextCNNClassifier(object):
             self.emb_chars_exp = tf.expand_dims(self.emb_chars, -1)
 
         # convolution Layer
-
         pooled_outputs = []
         for i, filter_size in enumerate(filter_sizes):
             with tf.name_scope('conv-max-pool-' + str(filter_size)):

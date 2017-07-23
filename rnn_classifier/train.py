@@ -63,5 +63,9 @@ while niter < 500:
     test_eval = mdl.eval_step(sess, test_x, test_y, metrics) \
         if niter % 20 == 0 else 'SKIP'
     print niter, 'train:', train_eval, 'test:', test_eval
-
+save_path = mdl.saver.save(
+    sess,
+    './model_export/model.ckpt',
+    global_step=mdl.global_step)
+print "model saved:", save_path
 sess.close()

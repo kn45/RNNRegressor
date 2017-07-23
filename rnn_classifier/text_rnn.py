@@ -102,8 +102,8 @@ class TextRNNClassifier(object):
 
         # calculate softmax loss
         if obj == 'softmax':
-            reg_loss = reg_lambda * (tf.nn.l2_loss(w) + tf.nn.l2_loss(b))  # l2 reg
-            self.total_loss = self.loss + reg_loss
+            l2_loss = reg_lambda * (tf.nn.l2_loss(w) + tf.nn.l2_loss(b))
+            self.total_loss = self.loss + l2_loss
 
         # calculate sampled softmax_loss
         if obj == 'ss':
@@ -139,6 +139,9 @@ class TextRNNClassifier(object):
             labels=labels_c,
             predictions=preds_c,
             num_thresholds=1000)
+
+        # saver and loader
+        self.saver = tf.train.Saver()
 
     def train_step(self, sess, inp_batch_x, inp_batch_y, evals=None):
         input_dict = {

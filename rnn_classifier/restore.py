@@ -10,7 +10,7 @@ NWORDS = 18765
 SEQ_LEN = 100
 LABEL_REPR = 'sparse'
 
-save_path = './model_export/model.ckpt-500'
+save_path = './model_ckpt/model.ckpt-500'
 
 # load model
 mdl2 = TextRNNClassifier(

@@ -174,9 +174,13 @@ class TextRNNClassifier(object):
         return eval_res
 
     def predict(self, sess, input_x):
-        pred_dict = {self.inp_x: input_x}
+        pred_dict = {
+            self.inp_x: input_x,
+            self.dropout_prob: 1.0}
         return sess.run(self.preds, feed_dict=pred_dict)
 
     def predict_proba(self, sess, input_x):
-        pred_dict = {self.inp_x: input_x}
+        pred_dict = {
+            self.inp_x: input_x,
+            self.dropout_prob: 1.0}
         return sess.run(self.scores, feed_dict=pred_dict)

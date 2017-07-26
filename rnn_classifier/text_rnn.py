@@ -95,6 +95,7 @@ class TextRNNClassifier(object):
         b = tf.Variable(tf.constant(0.1, shape=[nclass]), name='b')
         self.scores = tf.nn.xw_plus_b(oup_rnn, w, b, name='scores')
         self.preds = tf.argmax(self.scores, 1, name='predictions')
+        self.proba = tf.nn.softmax(self.scores)
 
         self.loss = tf.reduce_mean(
             tf.nn.softmax_cross_entropy_with_logits(
@@ -134,7 +135,7 @@ class TextRNNClassifier(object):
 
         # auc
         labels_c = self.inp_y_sparse
-        preds_c = tf.nn.softmax(self.scores)[:, 1]
+        preds_c = self.proba[:, 1]
         self.auc = tf.metrics.auc(
             labels=labels_c,
             predictions=preds_c,
@@ -183,4 +184,4 @@ class TextRNNClassifier(object):
         pred_dict = {
             self.inp_x: input_x,
             self.dropout_prob: 1.0}
-        return sess.run(self.scores, feed_dict=pred_dict)
+        return sess.run(self.proba, feed_dict=pred_dict)

@@ -55,7 +55,7 @@ sess.run(tf.local_variables_initializer())
 metrics = ['loss', 'auc']
 niter = 0
 mdl_ckpt_dir = './model_ckpt/model.ckpt'
-while niter < 500:
+while niter < 1000:
     niter += 1
     batch_data = freader.get_batch(128)
     if not batch_data:

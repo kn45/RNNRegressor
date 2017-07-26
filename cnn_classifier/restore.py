@@ -12,7 +12,7 @@ LABEL_REPR = 'sparse'
 FILTER_SIZES = [3, 4, 5]
 NFILTERS = 128
 
-save_path = './model_ckpt/model.ckpt-500'
+save_path = './model_ckpt/'
 
 # load model
 mdl2 = TextCNNClassifier(
@@ -26,8 +26,6 @@ mdl2 = TextCNNClassifier(
     lr=1e-3,
     label_repr=LABEL_REPR)
 
-
-
 sess2 = tf.Session()
-mdl2.saver.restore(sess2, save_path)
+mdl2.saver.restore(sess2, tf.train.latest_checkpoint(save_path))
 print sess2.run(mdl2.global_step)

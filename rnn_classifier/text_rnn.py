@@ -15,7 +15,7 @@ class TextRNNClassifier(object):
                  nlabel=1, label_repr='dense',
                  obj='softmax', lr=1e-3, init_embed=None):
         """Construct RNN network.
-        nlabel > 1 only when multi-label task
+        nlabel > 1 only when multi-label task.
         """
         if label_repr not in ['dense', 'sparse']:
             raise Exception('invalid label_repr')
@@ -144,7 +144,7 @@ class TextRNNClassifier(object):
         # saver and loader
         self.saver = tf.train.Saver()
 
-    def train_step(self, sess, inp_batch_x, inp_batch_y, evals=None):
+    def train_step(self, sess, inp_batch_x, inp_batch_y):
         input_dict = {
             self.inp_x: inp_batch_x,
             self.dropout_prob: 0.5}

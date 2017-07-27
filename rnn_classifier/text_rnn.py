@@ -12,10 +12,9 @@ class TextRNNClassifier(object):
     """
     def __init__(self, vocab_size, emb_dim=256, hid_dim=128, nclass=1,
                  seq_len=50, cellt='LSTM', nlayer=1, reg_lambda=0, nsample=5,
-                 nlabel=1, label_repr='dense',
+                 label_repr='dense',
                  obj='softmax', lr=1e-3, init_embed=None):
         """Construct RNN network.
-        nlabel > 1 only when multi-label task.
         """
         if label_repr not in ['dense', 'sparse']:
             raise Exception('invalid label_repr')
@@ -31,7 +30,7 @@ class TextRNNClassifier(object):
             self.inp_y_dense = tf.placeholder(tf.float32, [None, nclass], 'input_y')
             self.inp_y_sparse = tf.argmax(self.inp_y_dense, 1)
         if label_repr == 'sparse':
-            self.inp_y_sparse = tf.placeholder(tf.int64, [None, nlabel], 'input_y')
+            self.inp_y_sparse = tf.placeholder(tf.int64, [None, 1], 'input_y')
             self.inp_y_dense = tf.reduce_sum(
                 tf.one_hot(indices=self.inp_y_sparse, depth=nclass),
                 reduction_indices=1)

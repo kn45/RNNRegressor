@@ -12,4 +12,4 @@ Some network structures by tensorflow. Only pieces of code, not friendly to publ
 
 
 
-  * Not in good condition
+\* Not in good condition

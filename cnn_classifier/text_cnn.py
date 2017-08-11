@@ -110,9 +110,10 @@ class TextCNNClassifier(object):
                     tf.cast(self.correct_preds, 'float'), name='accuracy')
 
         # auc
+        # IN EXPERIMENT! Only correct for binary task!
         labels_c = self.inp_y
         preds_c = self.proba[:, 1]
-        self.auc = tf.metrics.auc(
+        self.auc, self.update_auc = tf.metrics.auc(
             labels=labels_c,
             predictions=preds_c,
             num_thresholds=1000)
@@ -141,7 +142,10 @@ class TextCNNClassifier(object):
             if metric == 'accuracy':
                 eval_res.append(sess.run(self.accuracy, feed_dict=eval_dict))
             if metric == 'auc':
-                eval_res.append(sess.run(self.auc, feed_dict=eval_dict))
+                # In Experiment! Only correct for binary task!
+                sess.run(tf.local_variables_initializer())
+                sess.run(self.update_auc, feed_dict=eval_dict)
+                eval_res.append(sess.run(self.auc))
         return eval_res
 
     def predict(self, sess, input_x):

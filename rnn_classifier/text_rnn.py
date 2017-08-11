@@ -123,7 +123,7 @@ class TextRNNClassifier(object):
                 dtype=tf.float32)
 
         # bptt
-        self.opt = tf.train.AdamOptimizer(lr).minimize(
+        self.opt = tf.contrib.opt.LazyAdamOptimizer(lr).minimize(
             self.total_loss, global_step=self.global_step)
 
         # accuracy

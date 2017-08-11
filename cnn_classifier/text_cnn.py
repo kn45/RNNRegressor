@@ -9,26 +9,19 @@ class TextCNNClassifier(object):
     """
     def __init__(self, seq_len=100, emb_dim=256, nclass=1, vocab_size=10000,
                  filter_sizes=None, nfilters=3, reg_lambda=0.0, lr=1e-3,
-                 label_repr='dense'):
+                 multi_label=False):
         """Construct CNN network.
         """
-        if label_repr not in ['dense', 'sparse']:
-            raise Exception('invalid label_repr')
-
+        self.dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
+        self.global_step = tf.Variable(0, name='global_step', trainable=False)
         # prepare input and output placeholder
         self.inp_x = tf.placeholder(tf.int32, [None, seq_len], name='input_x')
-        self.inp_y = tf.placeholder(tf.float32, [None, nclass], name='input_y')
-        self.dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
-        self.label_repr = label_repr
-        if label_repr == 'dense':
-            self.inp_y_dense = tf.placeholder(tf.float32, [None, nclass], 'input_y')
-            self.inp_y_sparse = tf.argmax(self.inp_y_dense, 1)
-        if label_repr == 'sparse':
-            self.inp_y_sparse = tf.placeholder(tf.int64, [None, 1], 'input_y')
-            self.inp_y_dense = tf.reduce_sum(
-                tf.one_hot(indices=self.inp_y_sparse, depth=nclass),
-                reduction_indices=1)
-        self.global_step = tf.Variable(0, name='global_step', trainable=False)
+        if multi_label:
+            self.inp_y = tf.placeholder(
+                tf.float32, [None, nclass], name='input_y_multilabel')
+        else:
+            self.inp_y = tf.placeholder(
+                tf.int64, [None, 1], 'input_y_unilabel')
 
         # embedding
         with tf.name_scope('embedding'):
@@ -92,25 +85,32 @@ class TextCNNClassifier(object):
 
         # calculate mean cross-entropy loss
         with tf.name_scope('loss'):
-            self.loss = tf.reduce_mean(
-                tf.nn.softmax_cross_entropy_with_logits(
-                    logits=self.scores, labels=self.inp_y_dense))
+            if multi_label:
+                self.loss = tf.reduce_mean(
+                    tf.nn.softmax_cross_entropy_with_logits(
+                        labels=self.inp_y, logits=self.scores))
+            else:
+                self.loss = tf.reduce_mean(
+                    tf.nn.sparse_softmax_cross_entropy_with_logits(
+                        labels=tf.reshape(self.inp_y, [-1]),
+                        logits=self.scores))
             self.total_loss = self.loss + reg_lambda * self.l2_loss
 
         with tf.name_scope('opt'):
-            self.opt = tf.train.AdamOptimizer(
-                learning_rate=lr).minimize(
+            self.opt = tf.contrib.opt.LazyAdamOptimizer(lr).minimize(
                     self.total_loss, global_step=self.global_step)
 
         # accuracy
         with tf.name_scope('accuracy'):
-            correct_preds = tf.equal(
-                self.preds, self.inp_y_sparse)
-            self.accuracy = tf.reduce_mean(
-                tf.cast(correct_preds, 'float'), name='accuracy')
+            if multi_label:
+                self.accuracy = tf.constant(0.5)  # fake value
+            else:
+                self.correct_preds = tf.equal(self.preds, self.inp_y)
+                self.accuracy = tf.reduce_mean(
+                    tf.cast(self.correct_preds, 'float'), name='accuracy')
 
         # auc
-        labels_c = self.inp_y_sparse
+        labels_c = self.inp_y
         preds_c = self.proba[:, 1]
         self.auc = tf.metrics.auc(
             labels=labels_c,
@@ -123,11 +123,8 @@ class TextCNNClassifier(object):
     def train_step(self, sess, inp_batch_x, inp_batch_y, evals=None):
         input_dict = {
             self.inp_x: inp_batch_x,
-            self.dropout_prob: 0.5}
-        if self.label_repr == 'dense':
-            input_dict[self.inp_y_dense] = inp_batch_y
-        if self.label_repr == 'sparse':
-            input_dict[self.inp_y_sparse] = inp_batch_y
+            self.dropout_prob: 0.5,
+            self.inp_y: inp_batch_y}
         sess.run(self.opt, feed_dict=input_dict)
 
     def eval_step(self, sess, dev_x, dev_y, metrics=None):
@@ -135,11 +132,8 @@ class TextCNNClassifier(object):
             metrics = ['loss']
         eval_dict = {
             self.inp_x: dev_x,
-            self.dropout_prob: 1.0}
-        if self.label_repr == 'dense':
-            eval_dict[self.inp_y_dense] = dev_y
-        if self.label_repr == 'sparse':
-            eval_dict[self.inp_y_sparse] = dev_y
+            self.dropout_prob: 1.0,
+            self.inp_y: dev_y}
         eval_res = []
         for metric in metrics:
             if metric == 'loss':
@@ -147,7 +141,7 @@ class TextCNNClassifier(object):
             if metric == 'accuracy':
                 eval_res.append(sess.run(self.accuracy, feed_dict=eval_dict))
             if metric == 'auc':
-                eval_res.append(sess.run(self.auc, feed_dict=eval_dict)[0])
+                eval_res.append(sess.run(self.auc, feed_dict=eval_dict))
         return eval_res
 
     def predict(self, sess, input_x):

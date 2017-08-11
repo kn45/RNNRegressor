@@ -105,18 +105,19 @@ class TextCNNClassifier(object):
             if multi_label:
                 self.accuracy = tf.constant(0.5)  # fake value
             else:
-                self.correct_preds = tf.equal(self.preds, self.inp_y)
+                correct_preds = tf.equal(self.preds, self.inp_y)
                 self.accuracy = tf.reduce_mean(
-                    tf.cast(self.correct_preds, 'float'), name='accuracy')
+                    tf.cast(correct_preds, 'float'), name='accuracy')
 
         # auc
         # IN EXPERIMENT! Only correct for binary task!
-        labels_c = self.inp_y
-        preds_c = self.proba[:, 1]
-        self.auc, self.update_auc = tf.metrics.auc(
-            labels=labels_c,
-            predictions=preds_c,
-            num_thresholds=1000)
+        if multi_label:
+            pass
+        else:
+            self.auc, self.update_auc = tf.metrics.auc(
+                labels=self.inp_y,
+                predictions=self.proba[:, 1],
+                num_thresholds=1000)
 
         # saver and loader
         self.saver = tf.train.Saver()

@@ -14,6 +14,8 @@ class TextCNNClassifier(object):
         """
         self.dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
+        self.pretrained_emb = tf.placeholder(tf.float32, [vocab_size, emb_dim])
+
         # prepare input and output placeholder
         self.inp_x = tf.placeholder(tf.int32, [None, seq_len], name='input_x')
         if multi_label:
@@ -25,12 +27,13 @@ class TextCNNClassifier(object):
 
         # embedding
         with tf.name_scope('embedding'):
-            embedding = tf.Variable(
+            self.embedding = tf.Variable(
                 tf.random_uniform([vocab_size, emb_dim], -1.0, 1.0),
                 name='W')
-            self.emb_chars = tf.nn.embedding_lookup(embedding, self.inp_x)
+            self.emb_chars = tf.nn.embedding_lookup(self.embedding, self.inp_x)
             # expand 'channel' with -1 to satisfy conv2d requirement
             self.emb_chars_exp = tf.expand_dims(self.emb_chars, -1)
+        self.init_embedding = self.embedding.assign(self.pretrained_emb)
 
         # convolution Layer
         pooled_outputs = []
@@ -121,6 +124,12 @@ class TextCNNClassifier(object):
 
         # saver and loader
         self.saver = tf.train.Saver()
+
+    def assign_embedding(self, sess, embedding=None):
+        if embedding is None:
+            raise Exception('embedding is None')
+        input_dict = {self.pretrained_emb: embedding}
+        sess.run(self.init_embedding, feed_dict=input_dict)
 
     def train_step(self, sess, inp_batch_x, inp_batch_y, evals=None):
         input_dict = {

@@ -7,14 +7,14 @@ import tensorflow as tf
 class TextCNNClassifier(object):
     """CNN for text classifier
     """
-    def __init__(self, seq_len=100, emb_dim=256, nclass=1, vocab_size=10000,
+    def __init__(self, seq_len=100, emb_size=256, nclass=1, vocab_size=10000,
                  filter_sizes=None, nfilters=3, reg_lambda=0.0, lr=1e-3,
-                 multi_label=False):
+                 clip_gradients=5.0, multi_label=False):
         """Construct CNN network.
         """
         self.dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
-        self.pretrained_emb = tf.placeholder(tf.float32, [vocab_size, emb_dim])
+        self.pretrained_emb = tf.placeholder(tf.float32, [vocab_size, emb_size])
 
         # prepare input and output placeholder
         self.inp_x = tf.placeholder(tf.int32, [None, seq_len], name='input_x')
@@ -28,7 +28,7 @@ class TextCNNClassifier(object):
         # embedding
         with tf.name_scope('embedding'):
             self.embedding = tf.Variable(
-                tf.random_uniform([vocab_size, emb_dim], -1.0, 1.0),
+                tf.random_uniform([vocab_size, emb_size], -1.0, 1.0),
                 name='W')
             self.emb_chars = tf.nn.embedding_lookup(self.embedding, self.inp_x)
             # expand 'channel' with -1 to satisfy conv2d requirement
@@ -40,7 +40,7 @@ class TextCNNClassifier(object):
         for i, filter_size in enumerate(filter_sizes):
             with tf.name_scope('conv-max-pool-' + str(filter_size)):
                 # [filter height, filter width, in channels, out channels]
-                filter_shape = [filter_size, emb_dim, 1, nfilters]
+                filter_shape = [filter_size, emb_size, 1, nfilters]
                 W = tf.Variable(
                     tf.truncated_normal(filter_shape, stddev=0.1), name='W')
                 b = tf.Variable(tf.constant(0.1, shape=[nfilters]), name='b')
@@ -77,8 +77,7 @@ class TextCNNClassifier(object):
         # output
         with tf.name_scope('output'):
             W = tf.get_variable(
-                "W",
-                shape=[nfilters_total, nclass],
+                "W", shape=[nfilters_total, nclass],
                 initializer=tf.contrib.layers.xavier_initializer())
             b = tf.Variable(tf.constant(0.1, shape=[nclass]), name='b')
             self.l2_loss = tf.nn.l2_loss(W) + tf.nn.l2_loss(b)
@@ -100,8 +99,13 @@ class TextCNNClassifier(object):
             self.total_loss = self.loss + reg_lambda * self.l2_loss
 
         with tf.name_scope('opt'):
-            self.opt = tf.contrib.opt.LazyAdamOptimizer(lr).minimize(
-                    self.total_loss, global_step=self.global_step)
+            self.opt_LAdam = tf.contrib.opt.LazyAdamOptimizer(lr).minimize(
+                self.total_loss, global_step=self.global_step)
+            self.opt = tf.contrib.layers.optimize_loss(
+                self.total_loss, global_step=self.global_step,
+                learning_rate=lr, optimizer='Adam',
+                clip_gradients=clip_gradients)
+
 
         # accuracy
         with tf.name_scope('accuracy'):
@@ -114,9 +118,7 @@ class TextCNNClassifier(object):
 
         # auc
         # IN EXPERIMENT! Only correct for binary task!
-        if multi_label:
-            pass
-        else:
+        if not multi_label:
             self.auc, self.update_auc = tf.metrics.auc(
                 labels=self.inp_y,
                 predictions=self.proba[:, 1],

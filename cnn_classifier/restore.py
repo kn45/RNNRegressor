@@ -31,7 +31,7 @@ test_x, test_y = inp_fn_unilabel(test_data)
 # load model
 mdl2 = TextCNNClassifier(
     seq_len=SEQ_LEN,
-    emb_dim=128,
+    emb_size=128,
     nclass=NCLASS,
     vocab_size=NWORDS,
     filter_sizes=FILTER_SIZES,

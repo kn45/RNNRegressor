@@ -11,6 +11,7 @@ SEQ_LEN = 100
 FILTER_SIZES = [3, 4, 5]
 NFILTERS = 128
 
+
 def inp_fn_unilabel(data):
     inp_x = []
     inp_y = []

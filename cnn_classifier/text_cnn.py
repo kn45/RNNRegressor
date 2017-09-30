@@ -106,7 +106,6 @@ class TextCNNClassifier(object):
                 learning_rate=lr, optimizer='Adam',
                 clip_gradients=clip_gradients)
 
-
         # accuracy
         with tf.name_scope('accuracy'):
             if multi_label:
@@ -138,7 +137,7 @@ class TextCNNClassifier(object):
             self.inp_x: inp_batch_x,
             self.dropout_prob: 0.5,
             self.inp_y: inp_batch_y}
-        sess.run(self.opt, feed_dict=input_dict)
+        sess.run(self.opt_LAdam, feed_dict=input_dict)
 
     def eval_step(self, sess, dev_x, dev_y, metrics=None):
         if not metrics:

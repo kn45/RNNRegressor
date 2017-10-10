@@ -5,11 +5,11 @@ import tensorflow as tf
 class FMCore(object):
     """Factorization Machine Core
     """
-    def _sparse_mul(self, x, w):
+    def _sparse_mul(self, sp_x, w):
         """dense_res = sparse_x * dense_w
         """
-        return tf.nn.embedding_lookup_sparse(
-            w, x, sp_weights=None, combiner='sum', name='mul_sparse')
+        # tf.nn.embedding_lookup_sparse could achieve sparse gradient?
+        return tf.sparse_tensor_dense_matmul(sp_x, w, name='mul_sparse')
 
     def _sparse_pow(self, x, p):
         """sparse_res = pow(sparse_x, p)
@@ -17,7 +17,7 @@ class FMCore(object):
         return tf.SparseTensor(x.indices, tf.pow(x.values, p), x.dense_shape)
 
     def build_graph(self, inp_dim=None, hid_dim=8, lambda_w=0.0, lambda_v=0.0):
-        self.inp_x = tf.sparse_placeholder(dtype=tf.int64, name='input_x')
+        self.inp_x = tf.sparse_placeholder(dtype=tf.float32, name='input_x')
         self.inp_y = tf.placeholder(tf.float32, [None, 1], name='input_y')
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
         self.w0 = tf.Variable(tf.constant(0.1, shape=[1]), name='w0')
@@ -35,9 +35,9 @@ class FMCore(object):
                     self._sparse_mul(self.inp_x, self.V), 2)  # (bs, hid_dim)
             with tf.name_scope('2-way_right'):
                 self.right = self._sparse_mul(
-                    self._sparse_pow(self.inp_x, 2), tf.pow(self.V, 2))
+                    tf.square(self.inp_x), tf.pow(self.V, 2))
             self.degree2 = tf.reduce_sum(
-                tf.subtract(self.left, self.right), axis=1) * 0.5
+                tf.subtract(self.left, self.right), 1, keep_dims=True) * 0.5
         with tf.name_scope('prediction'):
             self.preds = self.degree1 + self.degree2
         with tf.name_scope('loss/reg_loss'):
@@ -73,12 +73,12 @@ class FMClassifier(FMCore):
         # init graph from input to predict y_hat
         self.build_graph(inp_dim, hid_dim, lambda_w, lambda_v)
         with tf.name_scope('loss/cross_entropy'):
-            self.loss = tf.nn.sigmoid_cross_entropy_with_logits(
-                labels=self.inp_y,
-                logits=self.preds)
+            self.loss = tf.reduce_mean(
+                tf.nn.sigmoid_cross_entropy_with_logits(
+                    labels=self.inp_y, logits=self.preds))
         with tf.name_scope('loss/total_loss'):
             self.total_loss = self.loss + self.reg_loss
-        self.opt = tf.contrib.opt.LazyAdamOptimizer(lr).minimize(
+        self.opt = tf.train.AdamOptimizer(lr).minimize(
             self.total_loss, global_step=self.global_step)
 
     def predict_proba(self, sess, inp_x, inp_y):
@@ -94,7 +94,9 @@ class FMRegressor(FMCore):
         self.build_graph(inp_dim, hid_dim, lambda_w, lambda_v)
         with tf.name_scope('loss/mse'):
             self.loss = tf.reduce_mean(
-                tf.square(tf.sub(self.inp_y, self.preds)))
+                tf.square(tf.subtract(self.inp_y, self.preds)))
+        with tf.name_scope('loss/total_loss'):
+            self.total_loss = self.loss + self.reg_loss
         self.opt = tf.contrib.opt.LazyAdamOptimizer(lr).minimize(
             self.total_loss, global_step=self.global_step)
 

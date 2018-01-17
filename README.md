@@ -6,8 +6,6 @@ Some network structures by tensorflow. Only pieces of code, not friendly to publ
 
 - CNN classifier for text
 
-- Factorization Machine
-
 - RNN regressor\*
 
 - Multilayer perceptron\*

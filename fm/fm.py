@@ -45,6 +45,9 @@ class FMCore(object):
                 lambda_w * tf.nn.l2_loss(self.W) + \
                 lambda_v * tf.nn.l2_loss(self.V)
 
+        # saver and loader
+        self.saver = tf.train.Saver()
+
     def train_step(self, sess, inp_x, inp_y):
         input_dict = {
             self.inp_x: inp_x,
@@ -99,6 +102,10 @@ class FMRegressor(FMCore):
             self.total_loss = self.loss + self.reg_loss
         self.opt = tf.contrib.opt.LazyAdamOptimizer(lr).minimize(
             self.total_loss, global_step=self.global_step)
+
+    def predict(self, sess, inp_x, inp_y):
+        return self._predict(self, sess, inp_x, inp_y)
+
 
 if __name__ == '__main__':
     mdl = FMClassifier(5)

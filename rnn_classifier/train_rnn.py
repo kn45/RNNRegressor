@@ -47,7 +47,10 @@ mdl = TextRNNClassifier(
     obj='softmax',
     nsample=1)
 
-sess = tf.Session()
+config = tf.ConfigProto()
+config.gpu_options.allow_growth=True
+sess = tf.Session(config=config)
+
 sess.run(tf.global_variables_initializer())
 sess.run(tf.local_variables_initializer())
 metrics = ['loss', 'auc']
